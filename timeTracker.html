@@ -30,17 +30,6 @@
   </header>
 
   <main class="relative container-lg mt-44">
-
-    <div x-data="{id: 1}">
-    <button @click="$dispatch('open-dropdown',{id})">Open Dropdown</button>
-</div>
-
-<ul x-data="{ open: false }"
-    x-show="open"
-    @open-dropdown.window="if ($event.detail.id == 1) open = true"
-    @click.away="open = false">
-    Dropdown Body
-</ul>
     
     <div x-data="{ mitarbeiterShow: true }">
       <div id="step-1" class="flex flex-col items-center min-h-full h-screen justify-center mx-64 p-20 text-white gap-2" x-show="mitarbeiterShow">
