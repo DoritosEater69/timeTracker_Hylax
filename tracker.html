@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracker</title>
+  <style>
+    .wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 50px;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    button {
+      color: #000;
+      border: 1px solid #000;
+      background-color: #fff;
+      outline: none;
+      padding: 20px 40px;
+      font-size: 25px;
+    }
+
+    button.active {
+      color: #fff;
+      background-color: #000;
+    }
+
+    .users,
+    .projects,
+    .buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 50px;
+    }
+
+    .msg {
+      margin-top: 50px;
+      color: #000;
+      text-align: center;
+      padding: 0 20px;
+      font-size: 25px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="users"></div>
+    <div class="projects"></div>
+    <div class="buttons">
+      <button class="aktiv">Aktiv</button>
+      <button class="pause">Pause</button>
+      <button class="feierabend">Feierabend</button>
+    </div>
+    <div class="msg"></div>
+    <div class="summary"></div>
+  </div>
+  <script>
+    var users = ["Lukasz", "Andrea"];
+    var projects = ["Hurrado", "Fellbox", "Dibea"];
+    var trackers = {};
+    var aktivbtn = document.querySelector(".aktiv");
+    var pausebtn = document.querySelector(".pause");
+    var feierabendbtn = document.querySelector(".feierabend");
+    var usersContainer = document.querySelector(".users");
+    var projectsContainer = document.querySelector(".projects");
+    var activeUser = null;
+    var activeProject = null;
+    var msg = document.querySelector(".msg");
+
+    //init users and projects
+    users.forEach(function (user) {
+      var btn = document.createElement("button");
+      btn.value = user;
+      btn.innerText = user;
+      btn.id = user;
+      btn.className = "userbtn";
+      btn.onclick = function () {
+        activeUser = btn;
+        if (document.querySelector(".userbtn.active")) {
+          document
+            .querySelector(".userbtn.active")
+            .classList.remove("active");
+        }
+        btn.classList.add("active");
+        checkTrackers(user);
+      };
+      usersContainer.appendChild(btn);
+    });
+
+    projects.forEach(function (project) {
+      var btn = document.createElement("button");
+      btn.value = project;
+      btn.innerText = project;
+      btn.id = project;
+      btn.className = "projectbtn";
+      btn.onclick = function () {
+        activeProject = btn;
+        if (document.querySelector(".projectbtn.active")) {
+          var lastProject = document.querySelector(".projectbtn.active");
+          lastProject.classList.remove("active");
+          aktiv(activeUser, btn);
+        }
+        btn.classList.add("active");
+      };
+      projectsContainer.appendChild(btn);
+    });
+
+
+    //init Trackers
+
+    initTrackers();
+
+    //Eventlisteners
+
+    aktivbtn.addEventListener("click", function () {
+      if (this.classList.contains("active")) {
+        console.log("läuft bereits");
+        return null;
+      }
+      var user = document.querySelector(".userbtn.active");
+      var project = document.querySelector(".projectbtn.active");
+      if (!checkInputs(user, project)) {
+        return null;
+      }
+      aktiv(user, project);
+      if (document.querySelector(".buttons .active")) {
+        document.querySelector(".buttons .active").classList.remove("active");
+      }
+      this.classList.add("active");
+    });
+
+    pausebtn.addEventListener("click", function () {
+      if (this.classList.contains("active")) {
+        console.log("bereits pausiert");
+        return null;
+      }
+      var user = document.querySelector(".userbtn.active");
+      var project = document.querySelector(".projectbtn.active");
+      if (!checkInputs(user, project)) {
+        return null;
+      }
+      pause(user, project);
+      if (document.querySelector(".buttons .active")) {
+        document.querySelector(".buttons .active").classList.remove("active");
+      }
+      this.classList.add("active");
+    });
+
+    feierabendbtn.addEventListener("click", function () {
+      var user = document.querySelector(".userbtn.active");
+      var project = document.querySelector(".projectbtn.active");
+      if (!checkInputs(user, project)) {
+        return null;
+      }
+      feierabend(user, project);
+      if (document.querySelector(".buttons .active")) {
+        document.querySelector(".buttons .active").classList.remove("active");
+      }
+    });
+
+    //functions
+
+    function aktiv(user, project) {
+      console.log("start " + user.value + " " + project.value);
+      fetch("https://hylax.de/wp-content/tracker/tracker.php", {
+        method: "POST",
+        body: "name=" + user.value + "&projekt=" + project.value + "&aktiv=true",
+
+        // Adding headers to the request
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8"
+        }
+      })
+
+        // Converting to JSON
+        .then(response => response.json())
+
+        // Displaying results to console
+        .then(json => {
+          console.log(json)
+          trackers[json.name] = {
+            aktiv: json.aktiv,
+            pause: false,
+            project: json.projekt,
+            beginn: json.start,
+            name: json.name
+          };
+        });
+    }
+
+    function pause(user, project) {
+      console.log("pausieren " + user.value + " " + project.value);
+
+      fetch("https://hylax.de/wp-content/tracker/tracker.php", {
+        method: "POST",
+        body: "name=" + user.value + "&projekt=" + project.value + "&pause=true",
+
+        // Adding headers to the request
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8"
+        }
+      })
+
+        // Converting to JSON
+        .then(response => response.json())
+
+        // Displaying results to console
+        .then(json => {
+          console.log(json)
+          trackers[json.name] = {
+            pause: json.aktiv,
+            aktiv: false,
+            project: json.pause,
+            beginn: json.start,
+            name: json.name
+          };
+        });
+    }
+
+
+    function feierabend(user, project) {
+      console.log("Feierabend " + user.value + " " + project.value);
+      fetch("https://hylax.de/wp-content/tracker/tracker.php", {
+        method: "POST",
+        body: "name=" + user.value + "&projekt=" + project.value + "&feierabend=true",
+
+        // Adding headers to the request
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8"
+        }
+      })
+
+        // Converting to JSON
+        .then(response => response.json())
+
+        // Displaying results to console
+        .then(json => {
+          console.log(json);
+          delete trackers[user.value];
+          json.forEach(data => {
+            if (data.projekt == 'Pause') {
+              trackers[data.name] = {
+                pause: data.aktiv,
+                aktiv: false,
+                project: data.pause,
+                beginn: data.start,
+                name: data.name
+              };
+            } else {
+              trackers[data.name] = {
+                aktiv: data.aktiv,
+                project: data.projekt,
+                beginn: data.start,
+                name: data.name
+              };
+            }
+          })
+          if (json.length > 0) {
+            checkTrackers(json[0].name);
+          }
+        });
+
+      user.classList.remove("active");
+      project.classList.remove("active");
+      msg.innerText = "Schönen Feierabend " + user.value;
+      clearMSG();
+    }
+
+    function initTrackers() {
+      fetch("https://hylax.de/wp-content/tracker/tracker.php", {
+        method: "POST",
+        body: "init=true",
+
+        // Adding headers to the request
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8"
+        }
+      })
+
+        // Converting to JSON
+        .then(response => response.json())
+
+        // Displaying results to console
+        .then(json => {
+          console.log(json);
+          json.forEach(data => {
+            if (data.projekt == 'Pause') {
+              trackers[data.name] = {
+                pause: data.aktiv,
+                aktiv: false,
+                project: data.pause,
+                beginn: data.start,
+                name: data.name
+              };
+            } else {
+              trackers[data.name] = {
+                aktiv: data.aktiv,
+                project: data.projekt,
+                beginn: data.start,
+                name: data.name
+              };
+            }
+          })
+          if (json.length > 0) {
+            checkTrackers(json[0].name);
+          }
+        });
+
+    }
+    function clearMSG() {
+      setTimeout(function () {
+        msg.innerText = "";
+      }, 3000);
+    }
+
+    function checkInputs(user, project) {
+      if (user && project) {
+        return true;
+      } else {
+        msg.innerText = "Wähle Mitarbeiter und Projekt aus!";
+        clearMSG();
+        return false;
+      }
+    }
+
+    function checkTrackers(user) {
+      console.log(user, trackers[user]);
+      if (trackers[user]?.aktiv) {
+        removeActives();
+        aktivbtn.classList.add("active");
+        document
+          .getElementById(trackers[user]?.project)
+          .classList.add("active");
+        document
+          .getElementById(trackers[user]?.name)
+          .classList.add("active");
+      } else if (trackers[user]?.pause) {
+        removeActives();
+        pausebtn.classList.add("active");
+        document
+          .getElementById(trackers[user]?.project)
+          .classList.add("active");
+        document
+          .getElementById(trackers[user].name)
+          .classList.add("active");
+      } else {
+        removeActives();
+      }
+    }
+
+    function removeActives() {
+      if (document.querySelector(".projects .active")) {
+        document
+          .querySelector(".projects .active")
+          .classList.remove("active");
+      }
+      if (document.querySelector(".buttons .active")) {
+        document.querySelector(".buttons .active").classList.remove("active");
+      }
+    }
+  </script>
+</body>
+
+</html>
